@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# FastAPI / app
+.env
+*.sqlite3
+*.db
+
+# IDE / editors
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage / test
+htmlcov/
+.coverage
+.coverage.*
+
+# Local config
+local_settings.py
