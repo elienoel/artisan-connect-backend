@@ -1,8 +1,8 @@
-"""initial schema
+"""initial migration
 
-Revision ID: c1273fd1244a
+Revision ID: fd25e3deabd2
 Revises: 
-Create Date: 2026-08-30 08:28:02.172410
+Create Date: 2026-09-02 19:36:06.266402
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c1273fd1244a'
+revision: str = 'fd25e3deabd2'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,17 +33,22 @@ def upgrade() -> None:
     op.create_index(op.f('ix_professions_slug'), 'professions', ['slug'], unique=True)
     op.create_table('users',
     sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=True),
     sa.Column('hashed_password', sa.String(length=255), nullable=False),
     sa.Column('full_name', sa.String(length=255), nullable=False),
     sa.Column('phone', sa.String(length=30), nullable=True),
     sa.Column('role', sa.Enum('CLIENT', 'PROFESSIONAL', 'ADMIN', name='user_role'), nullable=False),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
+    sa.Column('address', sa.String(length=500), nullable=True),
+    sa.Column('city', sa.String(length=120), nullable=True),
+    sa.Column('latitude', sa.Float(), nullable=True),
+    sa.Column('longitude', sa.Float(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_phone'), 'users', ['phone'], unique=True)
     op.create_table('conversations',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('client_id', sa.UUID(), nullable=False),
@@ -74,6 +79,25 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id')
     )
+    op.create_table('bookings',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('conversation_id', sa.UUID(), nullable=False),
+    sa.Column('client_id', sa.UUID(), nullable=False),
+    sa.Column('professional_id', sa.UUID(), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'ACCEPTED', 'DECLINED', 'COMPLETED', 'CANCELLED', name='booking_status'), nullable=False),
+    sa.Column('address', sa.String(length=500), nullable=False),
+    sa.Column('latitude', sa.Float(), nullable=False),
+    sa.Column('longitude', sa.Float(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('total_price', sa.Float(), nullable=False),
+    sa.Column('currency', sa.String(length=10), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['client_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('media',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('professional_id', sa.UUID(), nullable=False),
@@ -84,27 +108,60 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('professional_services',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('professional_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(length=150), nullable=False),
+    sa.Column('unit', sa.String(length=60), nullable=True),
+    sa.Column('price', sa.Float(), nullable=False),
+    sa.Column('currency', sa.String(length=10), nullable=False),
+    sa.Column('position', sa.Integer(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('booking_items',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('booking_id', sa.UUID(), nullable=False),
+    sa.Column('service_id', sa.UUID(), nullable=True),
+    sa.Column('service_name', sa.String(length=150), nullable=False),
+    sa.Column('unit', sa.String(length=60), nullable=True),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('quantity', sa.Integer(), nullable=False),
+    sa.Column('subtotal', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['service_id'], ['professional_services.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('messages',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('conversation_id', sa.UUID(), nullable=False),
     sa.Column('sender_id', sa.UUID(), nullable=False),
     sa.Column('content', sa.Text(), nullable=False),
+    sa.Column('message_type', sa.Enum('TEXT', 'BOOKING', name='message_type'), nullable=False),
+    sa.Column('booking_id', sa.UUID(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['sender_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('reviews',
     sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('booking_id', sa.UUID(), nullable=True),
     sa.Column('professional_id', sa.UUID(), nullable=False),
     sa.Column('client_id', sa.UUID(), nullable=False),
     sa.Column('rating', sa.Integer(), nullable=False),
     sa.Column('comment', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['client_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('booking_id'),
+    sa.UniqueConstraint('booking_id', name='uq_review_booking')
     )
     # ### end Alembic commands ###
 
@@ -113,9 +170,13 @@ def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('reviews')
     op.drop_table('messages')
+    op.drop_table('booking_items')
+    op.drop_table('professional_services')
     op.drop_table('media')
+    op.drop_table('bookings')
     op.drop_table('professional_profiles')
     op.drop_table('conversations')
+    op.drop_index(op.f('ix_users_phone'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     op.drop_index(op.f('ix_professions_slug'), table_name='professions')

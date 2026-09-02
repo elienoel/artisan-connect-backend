@@ -13,7 +13,9 @@ except Exception as e:
 done
 echo "Postgres is up."
 
-alembic upgrade head
-python seed.py
+if [ "$1" = "uvicorn" ]; then
+  alembic upgrade head
+  python seed.py
+fi
 
 exec "$@"
