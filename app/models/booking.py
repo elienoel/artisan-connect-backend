@@ -51,6 +51,10 @@ class Booking(Base):
     items: Mapped[list["BookingItem"]] = relationship(
         "BookingItem", back_populates="booking", cascade="all, delete-orphan"
     )
+    review: Mapped["Review | None"] = relationship(
+        "Review", back_populates="booking", uselist=False
+    )
+
 
 
 class BookingItem(Base):

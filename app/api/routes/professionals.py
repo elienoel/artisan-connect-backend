@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.professional import ProfessionalProfile
 from app.models.user import User, UserRole
@@ -45,6 +45,7 @@ def search_professionals(
     profession_id: uuid.UUID | None = None,
     q: str | None = Query(None, description="Free text search on business name"),
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
     distance = haversine_km_expr(ProfessionalProfile.latitude, ProfessionalProfile.longitude, lat, lng)
 
@@ -58,6 +59,8 @@ def search_professionals(
         stmt = stmt.where(ProfessionalProfile.profession_id == profession_id)
     if q:
         stmt = stmt.where(ProfessionalProfile.business_name.ilike(f"%{q}%"))
+    if current_user:
+        stmt = stmt.where(ProfessionalProfile.user_id != current_user.id)
 
     rows = db.execute(stmt).unique().all()
     return [_to_read_model(profile, dist) for profile, dist in rows]

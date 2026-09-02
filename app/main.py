@@ -12,6 +12,7 @@ from app.api.routes import (
     professional_services,
     professionals,
     professions,
+    reviews,
 )
 from app.core.config import settings
 from app.services.minio_client import ensure_bucket
@@ -40,6 +41,7 @@ app.include_router(professional_services.router, prefix=settings.API_V1_PREFIX)
 app.include_router(media.router, prefix=settings.API_V1_PREFIX)
 app.include_router(conversations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(bookings.router, prefix=settings.API_V1_PREFIX)
+app.include_router(reviews.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chat_ws.router)
 
 

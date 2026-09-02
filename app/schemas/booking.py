@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.booking import BookingStatus
+from app.schemas.review import ReviewRead
 
 
 class BookingItemCreate(BaseModel):
@@ -53,3 +54,5 @@ class BookingRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     items: list[BookingItemRead] = []
+    review: ReviewRead | None = None
+
