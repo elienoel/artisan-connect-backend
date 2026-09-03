@@ -17,6 +17,18 @@ from app.api.routes import (
 from app.core.config import settings
 from app.services.minio_client import ensure_bucket
 
+TAGS_METADATA = [
+    {"name": "auth", "description": "Registration, login and the current user's profile."},
+    {"name": "professions", "description": "Catalogue of trades (plombier, electricien, ...)."},
+    {"name": "professionals", "description": "Professional profiles: search, view, create and update."},
+    {"name": "professional-services", "description": "Services (with pricing) offered by a professional."},
+    {"name": "media", "description": "Avatar and portfolio photo/document uploads."},
+    {"name": "conversations", "description": "Client/professional conversations and their messages."},
+    {"name": "chat-ws", "description": "Realtime chat over WebSocket."},
+    {"name": "bookings", "description": "Booking requests and their lifecycle (accept, decline, complete)."},
+    {"name": "reviews", "description": "Client reviews left on completed bookings."},
+]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,7 +36,13 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description="API REST pour Artisan Connect: mise en relation entre clients et artisans/professionnels.",
+    version="1.0.0",
+    openapi_tags=TAGS_METADATA,
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,

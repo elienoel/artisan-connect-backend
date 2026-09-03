@@ -1,18 +1,22 @@
 import uuid
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
+# HTTPBearer (rather than OAuth2PasswordBearer) matches how /auth/login actually
+# works here: a JSON body, not an OAuth2 form post. It also gives Swagger UI's
+# "Authorize" dialog a plain "paste your token" field instead of a login form
+# that would post to a URL this API doesn't implement.
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    token: str | None = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     credentials_exception = HTTPException(
@@ -20,10 +24,10 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if token is None:
+    if credentials is None:
         raise credentials_exception
 
-    user_id = decode_access_token(token)
+    user_id = decode_access_token(credentials.credentials)
     if user_id is None:
         raise credentials_exception
 
@@ -34,16 +38,16 @@ def get_current_user(
 
 
 def get_current_user_optional(
-    token: str | None = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User | None:
     """Like get_current_user, but returns None instead of raising when there's
     no (or an invalid) token — for endpoints usable both anonymously and
     authenticated, where auth only changes the response (e.g. excluding the
     caller's own listing from search results)."""
-    if token is None:
+    if credentials is None:
         return None
-    user_id = decode_access_token(token)
+    user_id = decode_access_token(credentials.credentials)
     if user_id is None:
         return None
     user = db.get(User, uuid.UUID(user_id))

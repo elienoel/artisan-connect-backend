@@ -37,7 +37,7 @@ def _to_read_model(
     return data
 
 
-@router.get("/search", response_model=list[ProfessionalProfileRead])
+@router.get("/search", response_model=list[ProfessionalProfileRead], summary="Search professionals near a location")
 def search_professionals(
     lat: float = Query(..., description="Latitude of the search center"),
     lng: float = Query(..., description="Longitude of the search center"),
@@ -66,7 +66,7 @@ def search_professionals(
     return [_to_read_model(profile, dist) for profile, dist in rows]
 
 
-@router.get("/me", response_model=ProfessionalProfileRead)
+@router.get("/me", response_model=ProfessionalProfileRead, summary="Get the current user's professional profile")
 def get_my_professional_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -82,7 +82,7 @@ def get_my_professional_profile(
     return _to_read_model(profile, include_inactive_services=True)
 
 
-@router.get("/{professional_id}", response_model=ProfessionalProfileRead)
+@router.get("/{professional_id}", response_model=ProfessionalProfileRead, summary="Get a professional profile by id")
 def get_professional(professional_id: uuid.UUID, db: Session = Depends(get_db)):
     profile = (
         db.query(ProfessionalProfile)
@@ -95,7 +95,9 @@ def get_professional(professional_id: uuid.UUID, db: Session = Depends(get_db)):
     return _to_read_model(profile)
 
 
-@router.post("", response_model=ProfessionalProfileRead, status_code=201)
+@router.post(
+    "", response_model=ProfessionalProfileRead, status_code=201, summary="Create the current user's professional profile"
+)
 def create_professional_profile(
     payload: ProfessionalProfileCreate,
     db: Session = Depends(get_db),
@@ -112,7 +114,7 @@ def create_professional_profile(
     return _to_read_model(profile, include_inactive_services=True)
 
 
-@router.patch("/{professional_id}", response_model=ProfessionalProfileRead)
+@router.patch("/{professional_id}", response_model=ProfessionalProfileRead, summary="Update a professional profile")
 def update_professional_profile(
     professional_id: uuid.UUID,
     payload: ProfessionalProfileUpdate,

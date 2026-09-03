@@ -14,7 +14,7 @@ from app.schemas.chat import ConversationCreate, ConversationRead, MessageRead
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
-@router.get("", response_model=list[ConversationRead])
+@router.get("", response_model=list[ConversationRead], summary="List the current user's conversations")
 def list_conversations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     conversations = (
         db.query(Conversation)
@@ -46,7 +46,7 @@ def list_conversations(db: Session = Depends(get_db), current_user: User = Depen
     return result
 
 
-@router.post("", response_model=ConversationRead, status_code=201)
+@router.post("", response_model=ConversationRead, status_code=201, summary="Start (or reuse) a conversation")
 def start_conversation(
     payload: ConversationCreate,
     db: Session = Depends(get_db),
@@ -85,7 +85,7 @@ def start_conversation(
     )
 
 
-@router.get("/{conversation_id}/messages", response_model=list[MessageRead])
+@router.get("/{conversation_id}/messages", response_model=list[MessageRead], summary="List messages in a conversation")
 def get_messages(
     conversation_id: uuid.UUID,
     db: Session = Depends(get_db),

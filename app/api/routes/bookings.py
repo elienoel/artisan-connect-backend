@@ -45,7 +45,7 @@ def _get_or_create_conversation(db: Session, client_id: uuid.UUID, professional_
     return conversation
 
 
-@router.post("", response_model=BookingRead, status_code=201)
+@router.post("", response_model=BookingRead, status_code=201, summary="Create a booking request")
 async def create_booking(
     payload: BookingCreate,
     db: Session = Depends(get_db),
@@ -122,7 +122,7 @@ async def create_booking(
     return booking
 
 
-@router.get("/mine", response_model=list[BookingRead])
+@router.get("/mine", response_model=list[BookingRead], summary="List the current user's bookings")
 def list_my_bookings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     my_profile = db.query(ProfessionalProfile).filter(ProfessionalProfile.user_id == current_user.id).first()
     professional_id = my_profile.id if my_profile else None
@@ -133,7 +133,7 @@ def list_my_bookings(db: Session = Depends(get_db), current_user: User = Depends
     return query.order_by(Booking.created_at.desc()).all()
 
 
-@router.get("/{booking_id}", response_model=BookingRead)
+@router.get("/{booking_id}", response_model=BookingRead, summary="Get a booking by id")
 def get_booking(booking_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     booking = db.get(Booking, booking_id)
     if not booking:
@@ -145,7 +145,9 @@ def get_booking(booking_id: uuid.UUID, db: Session = Depends(get_db), current_us
     return booking
 
 
-@router.patch("/{booking_id}/status", response_model=BookingRead)
+@router.patch(
+    "/{booking_id}/status", response_model=BookingRead, summary="Accept, decline, complete or cancel a booking"
+)
 async def update_booking_status(
     booking_id: uuid.UUID,
     payload: BookingStatusUpdate,

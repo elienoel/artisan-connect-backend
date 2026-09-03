@@ -21,6 +21,9 @@ class MessageRead(BaseModel):
     content: str
     message_type: MessageType = MessageType.TEXT
     booking: BookingRead | None = None
+    media_url: str | None = None
+    media_mime_type: str | None = None
+    media_duration_seconds: int | None = None
     created_at: datetime
     read_at: datetime | None = None
 

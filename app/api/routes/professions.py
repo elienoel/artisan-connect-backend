@@ -10,12 +10,12 @@ from app.schemas.profession import ProfessionCreate, ProfessionRead
 router = APIRouter(prefix="/professions", tags=["professions"])
 
 
-@router.get("", response_model=list[ProfessionRead])
+@router.get("", response_model=list[ProfessionRead], summary="List active professions")
 def list_professions(db: Session = Depends(get_db)):
     return db.query(Profession).filter(Profession.is_active.is_(True)).order_by(Profession.name).all()
 
 
-@router.post("", response_model=ProfessionRead, status_code=201)
+@router.post("", response_model=ProfessionRead, status_code=201, summary="Create a profession (admin only)")
 def create_profession(
     payload: ProfessionCreate,
     db: Session = Depends(get_db),

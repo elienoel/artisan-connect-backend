@@ -22,7 +22,7 @@ def _get_owned_profile(db: Session, professional_id: uuid.UUID, current_user: Us
     return profile
 
 
-@router.get("", response_model=list[ProfessionalServiceRead])
+@router.get("", response_model=list[ProfessionalServiceRead], summary="List a professional's active services")
 def list_services(professional_id: uuid.UUID, db: Session = Depends(get_db)):
     profile = db.get(ProfessionalProfile, professional_id)
     if not profile:
@@ -35,7 +35,7 @@ def list_services(professional_id: uuid.UUID, db: Session = Depends(get_db)):
     )
 
 
-@router.post("", response_model=ProfessionalServiceRead, status_code=201)
+@router.post("", response_model=ProfessionalServiceRead, status_code=201, summary="Add a service")
 def create_service(
     professional_id: uuid.UUID,
     payload: ProfessionalServiceCreate,
@@ -50,7 +50,7 @@ def create_service(
     return service
 
 
-@router.patch("/{service_id}", response_model=ProfessionalServiceRead)
+@router.patch("/{service_id}", response_model=ProfessionalServiceRead, summary="Update a service")
 def update_service(
     professional_id: uuid.UUID,
     service_id: uuid.UUID,
@@ -70,7 +70,7 @@ def update_service(
     return service
 
 
-@router.delete("/{service_id}", status_code=204)
+@router.delete("/{service_id}", status_code=204, summary="Delete a service")
 def delete_service(
     professional_id: uuid.UUID,
     service_id: uuid.UUID,

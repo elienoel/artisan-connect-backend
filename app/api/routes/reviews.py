@@ -15,7 +15,9 @@ from app.models.user import User
 router = APIRouter(prefix="/bookings", tags=["reviews"])
 
 
-@router.post("/{booking_id}/review", response_model=ReviewRead, status_code=201)
+@router.post(
+    "/{booking_id}/review", response_model=ReviewRead, status_code=201, summary="Leave a review on a completed booking"
+)
 def create_review(
     booking_id: uuid.UUID,
     payload: ReviewCreate,

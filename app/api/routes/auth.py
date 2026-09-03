@@ -11,7 +11,7 @@ from app.schemas.user import Token, UserCreate, UserLogin, UserProfileUpdate, Us
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED, summary="Register a new account")
 def register(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.phone == payload.phone).first():
         raise HTTPException(status_code=400, detail="Phone number already registered")
@@ -33,7 +33,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     return Token(access_token=token, user=UserRead.model_validate(user))
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, summary="Log in with email/phone and password")
 def login(payload: UserLogin, db: Session = Depends(get_db)):
     user = (
         db.query(User)
@@ -47,12 +47,12 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     return Token(access_token=token, user=UserRead.model_validate(user))
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me", response_model=UserRead, summary="Get the current user's profile")
 def me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.patch("/me", response_model=UserRead)
+@router.patch("/me", response_model=UserRead, summary="Update the current user's profile")
 def update_me(
     payload: UserProfileUpdate,
     db: Session = Depends(get_db),
