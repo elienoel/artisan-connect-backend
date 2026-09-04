@@ -18,6 +18,13 @@ class UserBase(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def blank_email_to_none(cls, value: str | None) -> str | None:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
 
 class UserCreate(UserBase):
     password: str

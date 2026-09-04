@@ -69,6 +69,11 @@ def search_professionals(
 ):
     distance = haversine_km_expr(ProfessionalProfile.latitude, ProfessionalProfile.longitude, lat, lng)
 
+    # Intentionally not filtering on `is_verified` / `verification_status`
+    # yet: professionals show up here whether or not their identity has
+    # been validated by an admin. Once the app is ready to gate visibility
+    # on that (e.g. once clients can tell verified profiles apart in the
+    # UI), add `.where(ProfessionalProfile.is_verified.is_(True))` here.
     stmt = (
         select(ProfessionalProfile, distance.label("distance_km"))
         .options(*_RELATIONS)
@@ -119,6 +124,26 @@ def get_my_professional_profile(
     if not profile:
         raise HTTPException(status_code=404, detail="No professional profile for this user")
     return _to_read_model(profile, include_inactive_services=True)
+
+
+@router.get(
+    "/by-user/{user_id}", response_model=ProfessionalProfileRead, summary="Get a professional profile by user id"
+)
+def get_professional_by_user(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    profile = (
+        db.query(ProfessionalProfile)
+        .options(*_RELATIONS)
+        .filter(ProfessionalProfile.user_id == user_id)
+        .first()
+    )
+    if not profile:
+        raise HTTPException(status_code=404, detail="Professional not found")
+    is_favorite = bool(_favorite_ids(db, current_user, [profile.id]))
+    return _to_read_model(profile, is_favorite=is_favorite)
 
 
 @router.get("/{professional_id}", response_model=ProfessionalProfileRead, summary="Get a professional profile by id")
