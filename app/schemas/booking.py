@@ -30,6 +30,7 @@ class BookingCreate(BaseModel):
     address: str = Field(..., max_length=500)
     latitude: float
     longitude: float
+    scheduled_at: datetime
     notes: str | None = None
 
 
@@ -48,6 +49,7 @@ class BookingRead(BaseModel):
     address: str
     latitude: float
     longitude: float
+    scheduled_at: datetime | None
     notes: str | None
     total_price: float
     currency: str

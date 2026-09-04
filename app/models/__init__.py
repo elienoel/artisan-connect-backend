@@ -7,6 +7,10 @@ from app.models.message import Message
 from app.models.review import Review
 from app.models.service import ProfessionalService
 from app.models.booking import Booking, BookingItem
+from app.models.favorite import Favorite
+from app.models.availability import Availability
+from app.models.otp import OtpCode
+from app.models.payment import Payment
 
 __all__ = [
     "User",
@@ -19,4 +23,8 @@ __all__ = [
     "ProfessionalService",
     "Booking",
     "BookingItem",
+    "Favorite",
+    "Availability",
+    "OtpCode",
+    "Payment",
 ]

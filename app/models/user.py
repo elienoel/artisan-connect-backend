@@ -33,8 +33,18 @@ class User(Base):
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     is_active: Mapped[bool] = mapped_column(default=True)
+    phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     professional_profile: Mapped["ProfessionalProfile"] = relationship(
         "ProfessionalProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+
+    @property
+    def is_phone_verified(self) -> bool:
+        return self.phone_verified_at is not None
+
+    @property
+    def is_email_verified(self) -> bool:
+        return self.email_verified_at is not None

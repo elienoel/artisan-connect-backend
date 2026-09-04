@@ -35,6 +35,9 @@ class Message(Base):
     media_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     media_mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     media_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # MinIO object key, kept so expired media can be deleted from storage
+    # without having to reparse it out of media_url. Never exposed via the API.
+    media_object_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

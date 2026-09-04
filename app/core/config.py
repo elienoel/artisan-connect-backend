@@ -22,5 +22,10 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: list[str] = ["*"]
 
+    # Chat photos/videos/voice notes are deleted from storage this many days
+    # after being sent. The mobile app caches them locally on first view so
+    # they remain available to whoever already opened them.
+    CHAT_MEDIA_RETENTION_DAYS: int = 21
+
 
 settings = Settings()

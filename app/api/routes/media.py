@@ -127,7 +127,7 @@ async def upload_chat_media(
     if len(data) > max_size:
         raise HTTPException(status_code=400, detail=f"File too large (max {max_size // (1024 * 1024)}MB)")
 
-    _, url = upload_file(data, file.content_type, folder=f"conversations/{conversation_id}")
+    object_key, url = upload_file(data, file.content_type, folder=f"conversations/{conversation_id}")
 
     message = Message(
         conversation_id=conversation_id,
@@ -137,6 +137,7 @@ async def upload_chat_media(
         media_url=url,
         media_mime_type=file.content_type,
         media_duration_seconds=duration_seconds,
+        media_object_key=object_key,
     )
     db.add(message)
     db.commit()

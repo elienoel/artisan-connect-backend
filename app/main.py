@@ -1,21 +1,43 @@
+import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
     auth,
+    availability,
+    billing,
     bookings,
     chat_ws,
     conversations,
+    favorites,
     media,
+    otp,
     professional_services,
     professionals,
     professions,
     reviews,
+    verification,
 )
 from app.core.config import settings
+from app.core.database import SessionLocal
+from app.services.media_retention import purge_expired_chat_media
 from app.services.minio_client import ensure_bucket
+
+logger = logging.getLogger(__name__)
+
+
+def _run_chat_media_purge() -> None:
+    db = SessionLocal()
+    try:
+        purge_expired_chat_media(db)
+    except Exception:
+        logger.exception("Chat media purge job failed")
+    finally:
+        db.close()
 
 TAGS_METADATA = [
     {"name": "auth", "description": "Registration, login and the current user's profile."},
@@ -27,13 +49,27 @@ TAGS_METADATA = [
     {"name": "chat-ws", "description": "Realtime chat over WebSocket."},
     {"name": "bookings", "description": "Booking requests and their lifecycle (accept, decline, complete)."},
     {"name": "reviews", "description": "Client reviews left on completed bookings."},
+    {"name": "verification", "description": "Professional identity verification: submission and admin review."},
+    {"name": "favorites", "description": "A client's saved list of favorite professionals."},
+    {"name": "availability", "description": "A professional's declared weekly working hours."},
+    {
+        "name": "billing",
+        "description": "Premium subscription and search-ranking boost for professionals (payments are simulated for now).",
+    },
 ]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_bucket()
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(_run_chat_media_purge, "interval", days=1, next_run_time=datetime.now())
+    scheduler.start()
+
     yield
+
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
@@ -60,6 +96,11 @@ app.include_router(media.router, prefix=settings.API_V1_PREFIX)
 app.include_router(conversations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(bookings.router, prefix=settings.API_V1_PREFIX)
 app.include_router(reviews.router, prefix=settings.API_V1_PREFIX)
+app.include_router(verification.router, prefix=settings.API_V1_PREFIX)
+app.include_router(favorites.router, prefix=settings.API_V1_PREFIX)
+app.include_router(availability.router, prefix=settings.API_V1_PREFIX)
+app.include_router(otp.router, prefix=settings.API_V1_PREFIX)
+app.include_router(billing.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chat_ws.router)
 
 

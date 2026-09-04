@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.models.availability import Availability
 from app.models.booking import Booking, BookingItem, BookingStatus
 from app.models.conversation import Conversation
 from app.models.message import Message, MessageType
@@ -29,6 +31,27 @@ _ALLOWED_TRANSITIONS = {
 def _summary_text(items: list[BookingItem], total_price: float, currency: str) -> str:
     lines = [f"{item.quantity} x {item.service_name}" for item in items]
     return f"Réservation : {', '.join(lines)} — Total {total_price:.0f} {currency}"
+
+
+def _validate_scheduled_at(db: Session, professional_id: uuid.UUID, scheduled_at: datetime) -> datetime:
+    # Côte d'Ivoire runs on UTC+0 year-round (no DST), so a naive timestamp is
+    # treated as already being in the professional's local time.
+    if scheduled_at.tzinfo is None:
+        scheduled_at = scheduled_at.replace(tzinfo=timezone.utc)
+
+    if scheduled_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="scheduled_at must be in the future")
+
+    slots = db.query(Availability).filter(Availability.professional_id == professional_id).all()
+    if slots:
+        weekday = scheduled_at.weekday()
+        local_time = scheduled_at.timetz().replace(tzinfo=None)
+        matches = any(s.day_of_week == weekday and s.start_time <= local_time < s.end_time for s in slots)
+        if not matches:
+            raise HTTPException(
+                status_code=400, detail="Ce créneau est en dehors des disponibilités du professionnel"
+            )
+    return scheduled_at
 
 
 def _get_or_create_conversation(db: Session, client_id: uuid.UUID, professional_user_id: uuid.UUID) -> Conversation:
@@ -68,6 +91,7 @@ async def create_booking(
     if missing:
         raise HTTPException(status_code=400, detail="One or more services do not belong to this professional")
 
+    scheduled_at = _validate_scheduled_at(db, profile.id, payload.scheduled_at)
     conversation = _get_or_create_conversation(db, current_user.id, profile.user_id)
 
     booking_items: list[BookingItem] = []
@@ -96,6 +120,7 @@ async def create_booking(
         address=payload.address,
         latitude=payload.latitude,
         longitude=payload.longitude,
+        scheduled_at=scheduled_at,
         notes=payload.notes,
         total_price=total_price,
         currency=currency,

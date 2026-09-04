@@ -57,3 +57,11 @@ def presigned_url(object_key: str, expires_minutes: int = 60) -> str:
         )
     except S3Error:
         return ""
+
+
+def remove_object(object_key: str) -> None:
+    """Deletes an object from MinIO. Missing objects are treated as already gone."""
+    try:
+        _client.remove_object(settings.MINIO_BUCKET, object_key)
+    except S3Error:
+        pass

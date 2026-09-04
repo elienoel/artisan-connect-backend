@@ -46,3 +46,5 @@ class ProfessionalProfileRead(ProfessionalProfileBase):
     distance_km: float | None = None
     photo_urls: list[str] = []
     services: list[ProfessionalServiceRead] = []
+    is_favorite: bool = False
+    is_boost_active: bool = False

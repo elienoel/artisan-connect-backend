@@ -41,6 +41,10 @@ class Booking(Base):
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The client's requested date/time for the intervention. Nullable so
+    # bookings created before this field existed keep loading; new bookings
+    # always set it (enforced by BookingCreate, not by the DB).
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     total_price: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="FCFA")

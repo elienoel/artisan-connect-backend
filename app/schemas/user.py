@@ -51,6 +51,8 @@ class UserRead(UserBase):
     id: uuid.UUID
     role: UserRole
     avatar_url: str | None = None
+    is_phone_verified: bool = False
+    is_email_verified: bool = False
     created_at: datetime
 
 
