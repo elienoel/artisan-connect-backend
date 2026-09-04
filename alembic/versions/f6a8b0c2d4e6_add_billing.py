@@ -39,8 +39,12 @@ def upgrade() -> None:
     op.alter_column('professional_profiles', 'is_boosted', server_default=None)
     op.add_column('professional_profiles', sa.Column('boosted_until', sa.DateTime(timezone=True), nullable=True))
 
-    payment_purpose.create(op.get_bind(), checkfirst=True)
-    payment_status.create(op.get_bind(), checkfirst=True)
+    # payment_purpose/payment_status are intentionally NOT pre-created here:
+    # op.create_table() below auto-issues CREATE TYPE for enum columns it
+    # contains, so doing it again first would raise DuplicateObject in the
+    # same transaction (see e5f7a9b1c3d5 for the same gotcha). subscription_plan
+    # above is different: it's used with op.add_column(), which does not
+    # auto-create the type, so it still needs the explicit .create() call.
     op.create_table(
         'payments',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),

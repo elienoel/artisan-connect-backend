@@ -22,7 +22,11 @@ otp_channel = sa.Enum('phone', 'email', name='otp_channel')
 
 
 def upgrade() -> None:
-    otp_channel.create(op.get_bind(), checkfirst=True)
+    # Don't call otp_channel.create() here: op.create_table() below already
+    # issues CREATE TYPE for enum columns it contains, and doing both in the
+    # same transaction raises DuplicateObject (unlike op.add_column(), which
+    # does NOT auto-create the type — see subscription_plan in the next
+    # migration for that pattern).
     op.create_table(
         'otp_codes',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
