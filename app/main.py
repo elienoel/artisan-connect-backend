@@ -9,19 +9,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import (
     auth,
     availability,
-    billing,
     bookings,
     chat_ws,
     conversations,
     favorites,
     media,
-    otp,
     professional_services,
     professionals,
     professions,
     reviews,
     verification,
 )
+
+# billing (needs a payment provider) and otp (needs an SMS provider) are
+# built and DB-backed (see app/models/payment.py, app/models/otp.py) but not
+# wired into the app below, since neither has real credentials yet — see the
+# app.api.routes.billing / app.api.routes.otp import lines and their
+# app.include_router() calls further down for how to turn them back on.
+# from app.api.routes import billing, otp
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.services.media_retention import purge_expired_chat_media
@@ -52,10 +57,7 @@ TAGS_METADATA = [
     {"name": "verification", "description": "Professional identity verification: submission and admin review."},
     {"name": "favorites", "description": "A client's saved list of favorite professionals."},
     {"name": "availability", "description": "A professional's declared weekly working hours."},
-    {
-        "name": "billing",
-        "description": "Premium subscription and search-ranking boost for professionals (payments are simulated for now).",
-    },
+    # "billing" and "otp" tags omitted while those routers are disabled — see the note above the imports.
 ]
 
 
@@ -99,8 +101,8 @@ app.include_router(reviews.router, prefix=settings.API_V1_PREFIX)
 app.include_router(verification.router, prefix=settings.API_V1_PREFIX)
 app.include_router(favorites.router, prefix=settings.API_V1_PREFIX)
 app.include_router(availability.router, prefix=settings.API_V1_PREFIX)
-app.include_router(otp.router, prefix=settings.API_V1_PREFIX)
-app.include_router(billing.router, prefix=settings.API_V1_PREFIX)
+# app.include_router(otp.router, prefix=settings.API_V1_PREFIX)
+# app.include_router(billing.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chat_ws.router)
 
 

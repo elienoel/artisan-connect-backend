@@ -1,8 +1,8 @@
-"""initial migration
+"""initial schema
 
-Revision ID: fd25e3deabd2
+Revision ID: 19b4894a4240
 Revises: 
-Create Date: 2026-09-02 19:36:06.266402
+Create Date: 2026-09-04 19:27:44.316808
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'fd25e3deabd2'
+revision: str = '19b4894a4240'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -44,6 +44,8 @@ def upgrade() -> None:
     sa.Column('latitude', sa.Float(), nullable=True),
     sa.Column('longitude', sa.Float(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('phone_verified_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('email_verified_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
@@ -59,6 +61,17 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('client_id', 'professional_id', name='uq_conversation_pair')
     )
+    op.create_table('otp_codes',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('channel', sa.Enum('PHONE', 'EMAIL', name='otp_channel'), nullable=False),
+    sa.Column('code', sa.String(length=6), nullable=False),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('consumed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('professional_profiles',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -73,11 +86,31 @@ def upgrade() -> None:
     sa.Column('rating_avg', sa.Float(), nullable=False),
     sa.Column('rating_count', sa.Integer(), nullable=False),
     sa.Column('is_verified', sa.Boolean(), nullable=False),
+    sa.Column('verification_status', sa.Enum('UNSUBMITTED', 'PENDING', 'VERIFIED', 'REJECTED', name='verification_status'), nullable=False),
+    sa.Column('verification_document_url', sa.String(length=1000), nullable=True),
+    sa.Column('verification_document_object_key', sa.String(length=500), nullable=True),
+    sa.Column('verification_submitted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('verification_reviewed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('verification_rejection_reason', sa.Text(), nullable=True),
+    sa.Column('subscription_plan', sa.Enum('FREE', 'PREMIUM', name='subscription_plan'), nullable=False),
+    sa.Column('subscription_expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('is_boosted', sa.Boolean(), nullable=False),
+    sa.Column('boosted_until', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['profession_id'], ['professions.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id')
+    )
+    op.create_table('availabilities',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('professional_id', sa.UUID(), nullable=False),
+    sa.Column('day_of_week', sa.Integer(), nullable=False),
+    sa.Column('start_time', sa.Time(), nullable=False),
+    sa.Column('end_time', sa.Time(), nullable=False),
+    sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('professional_id', 'day_of_week', 'start_time', name='uq_availability_professional_slot')
     )
     op.create_table('bookings',
     sa.Column('id', sa.UUID(), nullable=False),
@@ -89,6 +122,7 @@ def upgrade() -> None:
     sa.Column('latitude', sa.Float(), nullable=False),
     sa.Column('longitude', sa.Float(), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('scheduled_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('total_price', sa.Float(), nullable=False),
     sa.Column('currency', sa.String(length=10), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -98,6 +132,16 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('favorites',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('client_id', sa.UUID(), nullable=False),
+    sa.Column('professional_id', sa.UUID(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['client_id'], ['users.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('client_id', 'professional_id', name='uq_favorite_client_professional')
+    )
     op.create_table('media',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('professional_id', sa.UUID(), nullable=False),
@@ -105,6 +149,20 @@ def upgrade() -> None:
     sa.Column('url', sa.String(length=1000), nullable=False),
     sa.Column('media_type', sa.Enum('PHOTO', 'DOCUMENT', name='media_type'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('payments',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('professional_id', sa.UUID(), nullable=False),
+    sa.Column('purpose', sa.Enum('SUBSCRIPTION', 'BOOST', name='payment_purpose'), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'SUCCEEDED', 'FAILED', name='payment_status'), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('currency', sa.String(length=10), nullable=False),
+    sa.Column('provider', sa.String(length=50), nullable=False),
+    sa.Column('provider_reference', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('paid_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['professional_id'], ['professional_profiles.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -139,8 +197,12 @@ def upgrade() -> None:
     sa.Column('conversation_id', sa.UUID(), nullable=False),
     sa.Column('sender_id', sa.UUID(), nullable=False),
     sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('message_type', sa.Enum('TEXT', 'BOOKING', name='message_type'), nullable=False),
+    sa.Column('message_type', sa.Enum('TEXT', 'BOOKING', 'IMAGE', 'VIDEO', 'AUDIO', name='message_type'), nullable=False),
     sa.Column('booking_id', sa.UUID(), nullable=True),
+    sa.Column('media_url', sa.String(length=1000), nullable=True),
+    sa.Column('media_mime_type', sa.String(length=100), nullable=True),
+    sa.Column('media_duration_seconds', sa.Integer(), nullable=True),
+    sa.Column('media_object_key', sa.String(length=500), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='SET NULL'),
@@ -172,9 +234,13 @@ def downgrade() -> None:
     op.drop_table('messages')
     op.drop_table('booking_items')
     op.drop_table('professional_services')
+    op.drop_table('payments')
     op.drop_table('media')
+    op.drop_table('favorites')
     op.drop_table('bookings')
+    op.drop_table('availabilities')
     op.drop_table('professional_profiles')
+    op.drop_table('otp_codes')
     op.drop_table('conversations')
     op.drop_index(op.f('ix_users_phone'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
@@ -182,3 +248,21 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_professions_slug'), table_name='professions')
     op.drop_table('professions')
     # ### end Alembic commands ###
+
+    # Alembic's autogenerate doesn't emit these: op.drop_table() drops a
+    # table's enum-typed columns but leaves the underlying PG enum type
+    # behind, so a downgrade-then-upgrade cycle would hit "type already
+    # exists" on the next CREATE TYPE. Drop them explicitly, in any order
+    # (no cross-dependencies between enum types themselves).
+    for enum_name in (
+        'user_role',
+        'otp_channel',
+        'verification_status',
+        'subscription_plan',
+        'booking_status',
+        'media_type',
+        'payment_purpose',
+        'payment_status',
+        'message_type',
+    ):
+        sa.Enum(name=enum_name).drop(op.get_bind(), checkfirst=True)
